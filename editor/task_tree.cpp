@@ -72,9 +72,12 @@ void TaskTree::_update_item(TreeItem *p_item) {
 	Ref<BTTask> task = p_item->get_metadata(0);
 	ERR_FAIL_COND_MSG(!task.is_valid(), "Invalid task reference in metadata.");
 	p_item->set_text(0, task->get_task_name());
-	if (IS_CLASS(task, BTComment)) {
+	if (!task->is_enabled_in_tree()) {
 		p_item->set_custom_font(0, theme_cache.comment_font);
 		p_item->set_custom_color(0, theme_cache.comment_color);
+		if (!task->is_enabled() && !IS_CLASS(task, BTComment)) {
+			p_item->set_text(0, task->get_task_name() + "  (disabled)");
+		}
 	} else if (task->get_custom_name().is_empty()) {
 		p_item->set_custom_font(0, theme_cache.normal_name_font);
 		p_item->clear_custom_color(0);
@@ -192,7 +195,7 @@ void TaskTree::_on_item_collapsed(Object *p_obj) {
 	}
 
 	Ref<BTTask> task = item->get_metadata(0);
-	ERR_FAIL_NULL(task);
+	ERR_FAIL_COND(task.is_null());
 	task->set_display_collapsed(item->is_collapsed());
 }
 
@@ -200,16 +203,41 @@ void TaskTree::_on_task_changed() {
 	_update_item(tree->get_selected());
 }
 
+void TaskTree::_on_branch_changed(const Ref<BTTask> &p_branch) {
+	TreeItem *item = _find_item(p_branch);
+	if (!item) {
+		return;
+	}
+	Vector<Ref<BTTask>> selection = get_selected_tasks();
+	TreeItem *parent = item->get_parent();
+	Ref<BTTask> task = item->get_metadata(0);
+	int index = item->get_index();
+	memdelete(item);
+	_create_tree(task, parent, index);
+	clear_selection();
+	for (const Ref<BTTask> &sel : selection) {
+		add_selection(sel);
+	}
+}
+
 void TaskTree::load_bt(const Ref<BehaviorTree> &p_behavior_tree) {
 	ERR_FAIL_COND_MSG(p_behavior_tree.is_null(), "Tried to load a null tree.");
 
-	Callable on_task_changed = callable_mp(this, &TaskTree::_on_task_changed);
-	if (last_selected.is_valid() && last_selected->is_connected(LW_NAME(changed), on_task_changed)) {
-		last_selected->disconnect(LW_NAME(changed), on_task_changed);
+	if (bt == p_behavior_tree) {
+		return;
+	}
+
+	if (bt.is_valid()) {
+		unload();
 	}
 
 	bt = p_behavior_tree;
-	tree->clear();
+
+	Callable on_branch_changed = callable_mp(this, &TaskTree::_on_branch_changed);
+	if (!bt->is_connected(LW_NAME(branch_changed), on_branch_changed)) {
+		bt->connect(LW_NAME(branch_changed), on_branch_changed);
+	}
+
 	probability_rect_cache.clear();
 	if (bt->get_root_task().is_valid()) {
 		updating_tree = true;
@@ -222,6 +250,11 @@ void TaskTree::unload() {
 	Callable on_task_changed = callable_mp(this, &TaskTree::_on_task_changed);
 	if (last_selected.is_valid() && last_selected->is_connected(LW_NAME(changed), on_task_changed)) {
 		last_selected->disconnect(LW_NAME(changed), on_task_changed);
+	}
+
+	Callable on_branch_changed = callable_mp(this, &TaskTree::_on_branch_changed);
+	if (bt.is_valid() && bt->is_connected(LW_NAME(branch_changed), on_branch_changed)) {
+		bt->disconnect(LW_NAME(branch_changed), on_branch_changed);
 	}
 
 	bt.unref();
@@ -309,7 +342,7 @@ double TaskTree::get_selected_probability_percent() const {
 bool TaskTree::selected_has_probability() const {
 	bool result = false;
 	Ref<BTTask> selected = get_selected();
-	if (selected.is_valid() && !IS_CLASS(selected, BTComment)) {
+	if (selected.is_valid() && selected->is_enabled_in_tree()) {
 		Ref<BTProbabilitySelector> probability_selector = selected->get_parent();
 		result = probability_selector.is_valid();
 	}
@@ -574,7 +607,7 @@ void TaskTree::_bind_methods() {
 
 // TreeSearch API
 void TaskTree::tree_search_show_and_focus() {
-	ERR_FAIL_NULL(tree_search);
+	ERR_FAIL_COND(tree_search.is_null());
 	tree_search_panel->set_visible(true);
 	tree_search_panel->focus_editor();
 }
@@ -587,7 +620,7 @@ TreeSearch::SearchInfo TaskTree::tree_search_get_search_info() const {
 }
 
 void TaskTree::tree_search_set_search_info(const TreeSearch::SearchInfo &p_search_info) {
-	ERR_FAIL_NULL(tree_search);
+	ERR_FAIL_COND(tree_search.is_null());
 	tree_search_panel->set_search_info(p_search_info);
 }
 

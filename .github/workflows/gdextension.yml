@@ -44,7 +44,8 @@ env:
   SCONSFLAGS: use_mingw=yes dev_build=no
   EM_VERSION: 3.1.45
   EM_CACHE_FOLDER: "emsdk-cache"
-  GODOT_VERSION: 4.3-stable
+  GODOT_VERSION: 4.4-beta3
+  GODOT_REPO: godotengine/godot-builds
 
 jobs:
   gdextension:
@@ -57,14 +58,14 @@ jobs:
       matrix:
         opts:
           - name: 🐧 Linux (x86_64, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: linux
             target: template_release
             arch: x86_64
             should-build: true
 
           - name: 🐧 Linux (x86_64, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: linux
             target: editor
             arch: x86_64
@@ -99,70 +100,70 @@ jobs:
             should-build: true
 
           - name: 🌐 Web (wasm32, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: web
             target: template_release
             arch: wasm32
             should-build: ${{ !inputs.test-build }}
 
           - name: 🌐 Web (wasm32, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: web
-            target: template_debug
+            target: editor
             arch: wasm32
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (arm64, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: template_release
             arch: arm64
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (arm64, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: editor
             arch: arm64
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (arm32, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: template_release
             arch: arm32
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (arm32, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: editor
             arch: arm32
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (x86_64, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: template_release
             arch: x86_64
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (x86_64, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: editor
             arch: x86_64
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (x86_32, release)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: template_release
             arch: x86_32
             should-build: ${{ !inputs.test-build }}
 
           - name: 🤖 Android (x86_32, debug)
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             platform: android
             target: editor
             arch: x86_32
@@ -178,7 +179,7 @@ jobs:
           - name: 🍏 iOS (arm64, debug)
             runner: macos-latest
             platform: ios
-            target: template_debug
+            target: editor
             arch: arm64
             should-build: ${{ !inputs.test-build }}
 
@@ -193,7 +194,7 @@ jobs:
           - name: 🍏 iOS (simulator, debug)
             runner: macos-latest
             platform: ios
-            target: template_debug
+            target: editor
             arch: universal
             scons-flags: ios_simulator=yes
             should-build: ${{ !inputs.test-build }}
@@ -351,7 +352,7 @@ jobs:
           echo "Downloading Godot ${GODOT_VERSION}"
           mkdir bin
           cd bin
-          wget "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -O godot.zip
+          wget "https://github.com/${GODOT_REPO}/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -O godot.zip
           unzip godot.zip
           rm godot.zip
           mv Godot_* godot
